@@ -1,5 +1,6 @@
 import math
 from typing import *
+from copy import deepcopy
 
 IndexingVariants = Literal[0, 1]
 RangeExpr = Tuple[int, int]
@@ -40,6 +41,8 @@ class namedrange:
                              f"`names`: {len(names)} vs. `ranges`: {len(ranges)}")
         self._ranges = dict(zip(names, ranges))
         self.indexing = indexing
+        if self.indexing not in [1, 0]:
+            raise ValueError(f"Only 0-based or 1-based indexing supported, got: {indexing}")
         self.right_side_closed = right_side_closed
 
     @classmethod
@@ -97,8 +100,8 @@ class namedrange:
     def values(self):
         return self._ranges.values()
 
-    def __dict__(self):
-        return self._ranges
+    def items(self):
+        return self._ranges.items()
 
     def __str__(self):
         return str(self._ranges)
@@ -150,3 +153,38 @@ class namedrange:
 
         # Update the ranges dictionary with new entries
         self._ranges = updated_ranges
+
+    def reindex(self, keep_gaps: bool = True, inplace: bool = False):
+        repl = {}
+        new_r_start = 0 if self.indexing == 0 else 1
+
+        sorted_ranges = sorted(self._ranges.items(), key=lambda x: x[1])
+        complement_ranges = self.complement()
+
+        for idx, (name, r) in enumerate(sorted_ranges):
+            range_length = r[1] - r[0] + 1
+            new_r_end = new_r_start + range_length
+            if not self.right_side_closed:
+                new_r_end -= 1
+            reindexed_range = (new_r_start, new_r_end)
+            repl[name] = reindexed_range
+            if not keep_gaps:
+                new_r_start = new_r_end + 1
+            else:
+                if len(complement_ranges) > idx + 1:
+                    gap_start, gap_end = complement_ranges[idx + 1]
+                    gap_len = gap_end - gap_start + 1
+                    new_r_start = new_r_end + gap_len + 1
+                    new_r_end += gap_len + range_length + 1
+                else:
+                    new_r_start = new_r_end + 1
+                    new_r_end += range_length + 1
+                if not self.right_side_closed:
+                    new_r_end -= 1
+
+        if inplace:
+            self._ranges = repl
+        else:
+            cp = deepcopy(self)
+            cp._ranges = repl
+            return cp
