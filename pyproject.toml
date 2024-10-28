@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "namedranges"
+version = "0.1.0"
+description = "Named ranges with utilities for index reflows"
+authors = ["Chris Czarnecki <kjczarne@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+[tool.poetry.group.dev.dependencies]
+yapf = "^0.40.2"
+pytest = "^8.3.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
