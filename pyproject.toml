@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "namedranges"
-version = "0.1.0"
+version = "0.2.0"
 description = "Named ranges with utilities for index reflows"
 authors = ["Chris Czarnecki <kjczarne@gmail.com>"]
 license = "MIT"
