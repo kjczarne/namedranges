@@ -28,6 +28,12 @@ class TestBasic(unittest.TestCase):
             "1": (1, 6),
             "2": (7, 16)
         }
+        cls.ranges_str = {
+            "1": "1-5",
+            "2": "6-22",
+            "3": "23-26",
+            "4": "27-38"
+        }
 
     def test_gap_insertion(self):
         nr = namedrange.from_dict(self.ranges)
@@ -56,6 +62,10 @@ class TestBasic(unittest.TestCase):
         self.assertDictEqual(reindexed_nr.to_dict(), self.expected_3_with_gaps_left_out)
         # print(reindexed_nr)
         # print(self.expected_3_with_gaps_left_out)
+
+    def test_str_range_expression_parsing(self):
+        nr = namedrange.from_dict(self.ranges_str, indexing=1)
+        self.assertDictEqual(nr.to_dict(), self.ranges)
 
 
 if __name__ == "__main__":

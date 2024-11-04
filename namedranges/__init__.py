@@ -3,11 +3,13 @@ from typing import *
 from copy import deepcopy
 
 IndexingVariants = Literal[0, 1]
-RangeExpr = Tuple[int, int]
+TupleRangeExpr = Tuple[int, int] 
+RangeExpr = TupleRangeExpr | str
 RangeName = str
 
 DEFAULT_INDEXING = 0
 DEFAULT_RIGHT_SIDE_CLOSED = False
+DEFAULT_SEPARATOR = "-"
 
 
 def calculate_complementary_ranges(input_ranges, start, end) -> List[RangeExpr]:
@@ -30,20 +32,32 @@ def calculate_complementary_ranges(input_ranges, start, end) -> List[RangeExpr]:
     return complementary_ranges
 
 
+def str_ranges_to_tuple_ranges(ranges: Iterable[RangeExpr], separator: str = DEFAULT_SEPARATOR) -> List[TupleRangeExpr]:
+    if all(map(lambda x: isinstance(x, tuple), ranges)):
+        # Ensure idempotency but with consistent return type:
+        return list(ranges)
+    tuple_ranges = []
+    for range_ in ranges:
+        start, end = range_.split(separator)
+        tuple_ranges.append((int(start), int(end)))
+    return tuple_ranges
+
+
 class namedrange:
 
     def __init__(self,
                  names: Iterable[RangeName],
                  ranges: Iterable[RangeExpr],
                  indexing: IndexingVariants = DEFAULT_INDEXING,
-                 right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED):
+                 right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED,
+                 separator_for_str_range_expressions: bool = DEFAULT_SEPARATOR):
         if not (hasattr(names, "__len__") or hasattr(ranges, "__len__")):
             raise TypeError("Names and ranges arguments should be iterables"\
                             "that support length evaluation via `__len__()`")
         if len(names) != len(ranges):
             raise ValueError(f"Lengths of names and ranges are not the same. "\
                              f"`names`: {len(names)} vs. `ranges`: {len(ranges)}")
-        self._ranges = dict(zip(names, ranges))
+        self._ranges = dict(zip(names, str_ranges_to_tuple_ranges(ranges, separator_for_str_range_expressions)))
         self.indexing = indexing
         if self.indexing not in [1, 0]:
             raise ValueError(f"Only 0-based or 1-based indexing supported, got: {indexing}")
@@ -201,10 +215,15 @@ class namedrange:
 
 
 def namedrange_closure(indexing: IndexingVariants = DEFAULT_INDEXING,
-                       right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED):
+                       right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED,
+                       separator_for_str_range_expressions: bool = DEFAULT_SEPARATOR):
     """A closure for creating `namedrange` objects. This lets you define
     consistent behavior for all `namedrange` objects you're using, e.g.
     defined indexing or whether the interval should be closed or open.
     """
 
-    return lambda names, ranges: namedrange(names, ranges, indexing, right_side_closed)
+    return lambda names, ranges: namedrange(names,
+                                            ranges,
+                                            indexing,
+                                            right_side_closed,
+                                            separator_for_str_range_expressions)
