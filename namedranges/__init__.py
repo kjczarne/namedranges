@@ -15,8 +15,8 @@ DEFAULT_SEPARATOR = "-"
 
 @dataclass
 class namedrange_args:
-    indexing: IndexingVariants = DEFAULT_INDEXING,
-    right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED,
+    indexing: IndexingVariants = DEFAULT_INDEXING
+    right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED
     separator_for_str_range_expressions: bool = DEFAULT_SEPARATOR
 
 
@@ -57,7 +57,9 @@ class namedrange:
     def __init__(self,
                  names: Iterable[RangeName],
                  ranges: Iterable[RangeExpr],
-                 args: namedrange_args):
+                 args: namedrange_args | None = None):
+        if args is None:
+            args = namedrange_args()
         if not (hasattr(names, "__len__") or hasattr(ranges, "__len__")):
             raise TypeError("Names and ranges arguments should be iterables"\
                             "that support length evaluation via `__len__()`")
@@ -74,7 +76,7 @@ class namedrange:
     @classmethod
     def from_dict(cls,
                   range_dict: Dict[RangeName, RangeExpr],
-                  args: namedrange_args):
+                  args: namedrange_args | None = None):
         self = cls(list(range_dict.keys()),
                    list(range_dict.values()),
                    args)
@@ -135,7 +137,7 @@ class namedrange:
         # return ",".join([f"({i[0]}, {i[1]})" for i in self._ranges])
 
     def __repr__(self):
-        return f"namedrange(complement={self.complement()})"
+        return f"namedrange({self._ranges})"
 
     def add_gaps(self,
                  gap_positions: List[RangeExpr],
@@ -218,3 +220,12 @@ class namedrange:
             cp = deepcopy(self)
             cp._ranges = repl
             return cp
+
+
+def rework_range_lists_into_dict(range_exprs: Dict[str, Iterable[RangeExpr]]) -> Dict[str, RangeExpr]:
+    out = {}
+    for key, range_list in range_exprs.items():
+        for idx, range_ in enumerate(range_list):
+            out[f"{key}-{idx}"] = range_
+
+    return out

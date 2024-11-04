@@ -1,5 +1,5 @@
 import unittest
-from namedranges import namedrange
+from namedranges import namedrange, namedrange_args
 
 
 class TestBasic(unittest.TestCase):
@@ -44,16 +44,16 @@ class TestBasic(unittest.TestCase):
         self.assertDictEqual(nr.to_dict(), self.expected_2)
 
     def test_complement(self):
-        nr = namedrange.from_dict(self.ranges, indexing=1)
+        nr = namedrange.from_dict(self.ranges, namedrange_args(indexing=1))
         complement = nr.complement()
         self.assertListEqual(complement, [])
-        nr = namedrange.from_dict(self.ranges, indexing=1)
+        nr = namedrange.from_dict(self.ranges, namedrange_args(indexing=1))
         nr.add_gaps(self.gaps_2, lambda x, _, __, i: x + f"-{i}")
         complement = nr.complement()
         self.assertEqual(self.gaps_2, complement)
 
     def test_reindex(self):
-        nr = namedrange.from_dict(self.ranges_3, indexing=1)
+        nr = namedrange.from_dict(self.ranges_3, namedrange_args(indexing=1))
         reindexed_nr = nr.reindex(keep_gaps=False)
         reindexed_nr_with_gaps = nr.reindex(keep_gaps=True)
         self.assertDictEqual(reindexed_nr_with_gaps.to_dict(), self.expected_3_with_gaps_maintained)
@@ -64,7 +64,7 @@ class TestBasic(unittest.TestCase):
         # print(self.expected_3_with_gaps_left_out)
 
     def test_str_range_expression_parsing(self):
-        nr = namedrange.from_dict(self.ranges_str, indexing=1)
+        nr = namedrange.from_dict(self.ranges_str, namedrange_args(indexing=1))
         self.assertDictEqual(nr.to_dict(), self.ranges)
 
 
