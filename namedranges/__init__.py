@@ -2,6 +2,7 @@ import math
 from typing import *
 from copy import deepcopy
 from dataclasses import dataclass, asdict
+from collections import OrderedDict
 
 IndexingVariants = Literal[0, 1]
 TupleRangeExpr = Tuple[int, int] 
@@ -20,7 +21,6 @@ class namedrange_args:
     right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED
     separator_for_str_range_expressions: bool = DEFAULT_SEPARATOR
     compare_start_when_sorting: bool = DEFAULT_COMPARE_START
-
 
 
 def calculate_complementary_ranges(input_ranges, start, end) -> List[RangeExpr]:
@@ -137,8 +137,10 @@ class namedrange:
 
     def sorted(self):
         if self.args.compare_start_when_sorting:
-            return sorted(self._ranges, key=lambda x: x[0])
-        return sorted(self._ranges, key=lambda x: x[1])
+            # return sorted(self._ranges.values(), key=lambda x: x[0])
+            return OrderedDict(sorted(self._ranges.items(), key=lambda item: item[1][0]))
+        # return sorted(self._ranges, key=lambda x: x[1])
+        return OrderedDict(sorted(self._ranges.items(), key=lambda item: item[1][1]))
 
     def __eq__(self, other):
         if isinstance(other, namedrange):

@@ -1,4 +1,5 @@
 import unittest
+from collections import OrderedDict
 from namedranges import namedrange, namedrange_args
 
 
@@ -77,8 +78,10 @@ class TestBasic(unittest.TestCase):
     def test_sorting(self):
         nr1 = namedrange.from_dict(self.sorting)
         sorted_ranges = list(sorted(nr1))
+        exp = OrderedDict({'2': (1, 9), '1': (10, 15)})
         self.assertEqual(sorted_ranges[0], (1, 9))
         self.assertEqual(sorted_ranges[1], (10, 15))
+        self.assertEqual(nr1.sorted(), exp)
 
 
 if __name__ == "__main__":
