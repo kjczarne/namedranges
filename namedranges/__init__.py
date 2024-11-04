@@ -198,3 +198,13 @@ class namedrange:
             cp = deepcopy(self)
             cp._ranges = repl
             return cp
+
+
+def namedrange_closure(indexing: IndexingVariants = DEFAULT_INDEXING,
+                       right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED):
+    """A closure for creating `namedrange` objects. This lets you define
+    consistent behavior for all `namedrange` objects you're using, e.g.
+    defined indexing or whether the interval should be closed or open.
+    """
+
+    return lambda names, ranges: namedrange(names, ranges, indexing, right_side_closed)
