@@ -15,7 +15,11 @@ def calculate_complementary_ranges(input_ranges, start, end) -> List[RangeExpr]:
     previous_end = start - 1
     # Calculate complementary ranges
     for range_start, range_end in input_ranges:
-        if range_start > previous_end + 1:
+        # if range_start == range_end:
+            # complementary_ranges.append((previous_end, range_start))
+            # complementary_ranges.append((previous_end + 2, range_start - 1))
+        # FIXME: multiple single-element ranges seem to not be resilient against this
+        if range_start > previous_end + 1 :
             complementary_ranges.append((previous_end + 1, range_start - 1))
         previous_end = range_end
     
@@ -80,13 +84,16 @@ class namedrange:
                 max_key = k
         return {max_key: max_val_tup}
 
-    def complement(self, start: int | None = None, end: int | None = None) -> List[RangeExpr]:
+    def complement(self, start: int | None = None, end: int | None = None, return_list: bool = True) -> List[RangeExpr]:
         if start is None:
             start = 1 if self.indexing == 1 else 0
         if end is None:
             end = list(self.last.values())[0][1] if self.right_side_closed else list(self.last.values())[0][1] - 1
         input_ranges = sorted(self._ranges.values())
-        return calculate_complementary_ranges(input_ranges, start, end)
+        complement_ = calculate_complementary_ranges(input_ranges, start, end)
+        if return_list:
+            return complement_
+        return namedrange.from_dict({idx: v for idx, v in enumerate(complement_)}, self.indexing, self.right_side_closed)
 
     def to_dict(self):
         return self._ranges
@@ -172,7 +179,10 @@ class namedrange:
                 new_r_start = new_r_end + 1
             else:
                 if len(complement_ranges) > idx + 1:
-                    gap_start, gap_end = complement_ranges[idx + 1]
+                    if r[0] == self.indexing:
+                        gap_start, gap_end = complement_ranges[idx]
+                    else:
+                        gap_start, gap_end = complement_ranges[idx + 1]
                     gap_len = gap_end - gap_start + 1
                     new_r_start = new_r_end + gap_len + 1
                     new_r_end += gap_len + range_length + 1
