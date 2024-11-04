@@ -1,6 +1,7 @@
 import math
 from typing import *
 from copy import deepcopy
+from dataclasses import dataclass
 
 IndexingVariants = Literal[0, 1]
 TupleRangeExpr = Tuple[int, int] 
@@ -10,6 +11,14 @@ RangeName = str
 DEFAULT_INDEXING = 0
 DEFAULT_RIGHT_SIDE_CLOSED = False
 DEFAULT_SEPARATOR = "-"
+
+
+@dataclass
+class namedrange_args:
+    indexing: IndexingVariants = DEFAULT_INDEXING,
+    right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED,
+    separator_for_str_range_expressions: bool = DEFAULT_SEPARATOR
+
 
 
 def calculate_complementary_ranges(input_ranges, start, end) -> List[RangeExpr]:
@@ -48,30 +57,27 @@ class namedrange:
     def __init__(self,
                  names: Iterable[RangeName],
                  ranges: Iterable[RangeExpr],
-                 indexing: IndexingVariants = DEFAULT_INDEXING,
-                 right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED,
-                 separator_for_str_range_expressions: bool = DEFAULT_SEPARATOR):
+                 args: namedrange_args):
         if not (hasattr(names, "__len__") or hasattr(ranges, "__len__")):
             raise TypeError("Names and ranges arguments should be iterables"\
                             "that support length evaluation via `__len__()`")
         if len(names) != len(ranges):
             raise ValueError(f"Lengths of names and ranges are not the same. "\
                              f"`names`: {len(names)} vs. `ranges`: {len(ranges)}")
-        self._ranges = dict(zip(names, str_ranges_to_tuple_ranges(ranges, separator_for_str_range_expressions)))
-        self.indexing = indexing
+        self._ranges = dict(zip(names, str_ranges_to_tuple_ranges(ranges, args.separator_for_str_range_expressions)))
+        self.indexing = args.indexing
         if self.indexing not in [1, 0]:
-            raise ValueError(f"Only 0-based or 1-based indexing supported, got: {indexing}")
-        self.right_side_closed = right_side_closed
+            raise ValueError(f"Only 0-based or 1-based indexing supported, got: {args.indexing}")
+        self.right_side_closed = args.right_side_closed
+        self.args = args
 
     @classmethod
     def from_dict(cls,
                   range_dict: Dict[RangeName, RangeExpr],
-                  indexing: IndexingVariants = DEFAULT_INDEXING,
-                  right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED):
+                  args: namedrange_args):
         self = cls(list(range_dict.keys()),
                    list(range_dict.values()),
-                   indexing,
-                   right_side_closed)
+                   args)
         return self
 
     @property
@@ -107,7 +113,7 @@ class namedrange:
         complement_ = calculate_complementary_ranges(input_ranges, start, end)
         if return_list:
             return complement_
-        return namedrange.from_dict({idx: v for idx, v in enumerate(complement_)}, self.indexing, self.right_side_closed)
+        return namedrange.from_dict({idx: v for idx, v in enumerate(complement_)}, self.args)
 
     def to_dict(self):
         return self._ranges
@@ -212,18 +218,3 @@ class namedrange:
             cp = deepcopy(self)
             cp._ranges = repl
             return cp
-
-
-def namedrange_closure(indexing: IndexingVariants = DEFAULT_INDEXING,
-                       right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED,
-                       separator_for_str_range_expressions: bool = DEFAULT_SEPARATOR):
-    """A closure for creating `namedrange` objects. This lets you define
-    consistent behavior for all `namedrange` objects you're using, e.g.
-    defined indexing or whether the interval should be closed or open.
-    """
-
-    return lambda names, ranges: namedrange(names,
-                                            ranges,
-                                            indexing,
-                                            right_side_closed,
-                                            separator_for_str_range_expressions)
