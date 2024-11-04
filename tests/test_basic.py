@@ -34,6 +34,8 @@ class TestBasic(unittest.TestCase):
             "3": "23-26",
             "4": "27-38"
         }
+        cls.eq_cmp = {"1": (0, 1), "2": (3, 4)}
+        cls.sorting = {"1": (10, 15), "2": (1, 9)}
 
     def test_gap_insertion(self):
         nr = namedrange.from_dict(self.ranges)
@@ -66,6 +68,17 @@ class TestBasic(unittest.TestCase):
     def test_str_range_expression_parsing(self):
         nr = namedrange.from_dict(self.ranges_str, namedrange_args(indexing=1))
         self.assertDictEqual(nr.to_dict(), self.ranges)
+
+    def test_equality_comparison(self):
+        nr1 = namedrange.from_dict(self.eq_cmp)
+        nr2 = namedrange.from_dict(self.eq_cmp)
+        self.assertEqual(nr1, nr2)
+
+    def test_sorting(self):
+        nr1 = namedrange.from_dict(self.sorting)
+        sorted_ranges = list(sorted(nr1))
+        self.assertEqual(sorted_ranges[0], (1, 9))
+        self.assertEqual(sorted_ranges[1], (10, 15))
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import math
 from typing import *
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 IndexingVariants = Literal[0, 1]
 TupleRangeExpr = Tuple[int, int] 
@@ -11,6 +11,7 @@ RangeName = str
 DEFAULT_INDEXING = 0
 DEFAULT_RIGHT_SIDE_CLOSED = False
 DEFAULT_SEPARATOR = "-"
+DEFAULT_COMPARE_START = True
 
 
 @dataclass
@@ -18,6 +19,7 @@ class namedrange_args:
     indexing: IndexingVariants = DEFAULT_INDEXING
     right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED
     separator_for_str_range_expressions: bool = DEFAULT_SEPARATOR
+    compare_start_when_sorting: bool = DEFAULT_COMPARE_START
 
 
 
@@ -67,11 +69,12 @@ class namedrange:
             raise ValueError(f"Lengths of names and ranges are not the same. "\
                              f"`names`: {len(names)} vs. `ranges`: {len(ranges)}")
         self._ranges = dict(zip(names, str_ranges_to_tuple_ranges(ranges, args.separator_for_str_range_expressions)))
-        self.indexing = args.indexing
-        if self.indexing not in [1, 0]:
+        if args.indexing not in [1, 0]:
             raise ValueError(f"Only 0-based or 1-based indexing supported, got: {args.indexing}")
-        self.right_side_closed = args.right_side_closed
         self.args = args
+        for k, v in asdict(args).items():
+            setattr(self, k, v)
+        self._iterator = iter(self._ranges.values())
 
     @classmethod
     def from_dict(cls,
@@ -108,9 +111,9 @@ class namedrange:
 
     def complement(self, start: int | None = None, end: int | None = None, return_list: bool = True) -> List[RangeExpr]:
         if start is None:
-            start = 1 if self.indexing == 1 else 0
+            start = 1 if self.args.indexing == 1 else 0
         if end is None:
-            end = list(self.last.values())[0][1] if self.right_side_closed else list(self.last.values())[0][1] - 1
+            end = list(self.last.values())[0][1] if self.args.right_side_closed else list(self.last.values())[0][1] - 1
         input_ranges = sorted(self._ranges.values())
         complement_ = calculate_complementary_ranges(input_ranges, start, end)
         if return_list:
@@ -131,6 +134,29 @@ class namedrange:
 
     def items(self):
         return self._ranges.items()
+
+    def sorted(self):
+        if self.args.compare_start_when_sorting:
+            return sorted(self._ranges, key=lambda x: x[0])
+        return sorted(self._ranges, key=lambda x: x[1])
+
+    def __eq__(self, other):
+        if isinstance(other, namedrange):
+            return all(map(lambda x: x[0] == x[1], zip(self._ranges, other._ranges)))
+        raise TypeError("Comparison only between `namedrange` objects is supported")
+
+    def __lt__(self, other):
+        if isinstance(other, namedrange):
+            if self.args.compare_start_when_sorting:
+                return all(map(lambda r1, r2: r1[0] < r2[0], zip(self._ranges, other._ranges)))
+            return all(map(lambda r1, r2: r1[1] < r2[1], zip(self._ranges, other._ranges)))
+        raise TypeError("Comparison only between `namedrange` objects is supported")
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self._iterator)
 
     def __str__(self):
         return str(self._ranges)
