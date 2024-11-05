@@ -29,6 +29,14 @@ class TestBasic(unittest.TestCase):
             "1": (1, 6),
             "2": (7, 16)
         }
+        cls.ranges_4 = {
+            "1": (1, 5),
+            "2": (11, 22)
+        }
+        cls.expected_4_with_gaps_maintained = {
+            "1": (1, 5),
+            "2": (11, 22)
+        }
         cls.ranges_str = {
             "1": "1-5",
             "2": "6-22",
@@ -56,7 +64,7 @@ class TestBasic(unittest.TestCase):
         self.assertEqual(self.gaps_2, complement)
 
     def test_reindex(self):
-        nr = namedrange.from_dict(self.ranges_3, namedrange_args(indexing=1))
+        nr = namedrange.from_dict(self.ranges_3, namedrange_args(indexing=1, right_side_closed=True))
         reindexed_nr = nr.reindex(keep_gaps=False)
         reindexed_nr_with_gaps = nr.reindex(keep_gaps=True)
         self.assertDictEqual(reindexed_nr_with_gaps.to_dict(), self.expected_3_with_gaps_maintained)
@@ -65,6 +73,9 @@ class TestBasic(unittest.TestCase):
         self.assertDictEqual(reindexed_nr.to_dict(), self.expected_3_with_gaps_left_out)
         # print(reindexed_nr)
         # print(self.expected_3_with_gaps_left_out)
+        nr = namedrange.from_dict(self.ranges_4, namedrange_args(indexing=1, right_side_closed=True))
+        reindexed_nr = nr.reindex(keep_gaps=True)
+        self.assertDictEqual(reindexed_nr.to_dict(), self.expected_4_with_gaps_maintained)
 
     def test_str_range_expression_parsing(self):
         nr = namedrange.from_dict(self.ranges_str, namedrange_args(indexing=1))

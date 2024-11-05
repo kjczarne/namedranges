@@ -80,6 +80,8 @@ class namedrange:
     def from_dict(cls,
                   range_dict: Dict[RangeName, RangeExpr],
                   args: namedrange_args | None = None):
+        if not isinstance(range_dict, dict):
+            raise TypeError(f"Input into the `from_dict` function should be a dictionary, got {type(range_dict)}")
         self = cls(list(range_dict.keys()),
                    list(range_dict.values()),
                    args)
@@ -213,41 +215,36 @@ class namedrange:
 
     def reindex(self, keep_gaps: bool = True, inplace: bool = False):
         repl = {}
-        new_r_start = 0 if self.indexing == 0 else 1
-
+        new_r_start = 0 if self.args.indexing == 0 else 1
         sorted_ranges = sorted(self._ranges.items(), key=lambda x: x[1])
-        complement_ranges = self.complement()
+        complement_ranges = self.complement() if keep_gaps else []
+
+        # For reindexing if the first gap is [0, x] for 0-indexed inputs
+        # or [1, x] for 1-indexed inputs, we need to drop the first gap from the complement:
+        if len(complement_ranges) > 0:
+            if complement_ranges[0][0] == self.args.indexing:
+                complement_ranges = complement_ranges[1:]
 
         for idx, (name, r) in enumerate(sorted_ranges):
             range_length = r[1] - r[0] + 1
-            new_r_end = new_r_start + range_length
-            if not self.right_side_closed:
-                new_r_end -= 1
+            new_r_end = new_r_start + range_length - 1 if self.args.right_side_closed else new_r_start + range_length
+
             reindexed_range = (new_r_start, new_r_end)
             repl[name] = reindexed_range
-            if not keep_gaps:
-                new_r_start = new_r_end + 1
+
+            # print(complement_ranges)
+            if idx < len(complement_ranges):
+                # Use the complement range to determine the gap length
+                gap_start, gap_end = complement_ranges[idx]
+                gap_len = gap_end - gap_start + 1
+                new_r_start = new_r_end + gap_len + 1
             else:
-                if len(complement_ranges) > idx + 1:
-                    if r[0] == self.indexing:
-                        gap_start, gap_end = complement_ranges[idx]
-                    else:
-                        gap_start, gap_end = complement_ranges[idx + 1]
-                    gap_len = gap_end - gap_start + 1
-                    new_r_start = new_r_end + gap_len + 1
-                    new_r_end += gap_len + range_length + 1
-                else:
-                    new_r_start = new_r_end + 1
-                    new_r_end += range_length + 1
-                if not self.right_side_closed:
-                    new_r_end -= 1
+                new_r_start = new_r_end + 1
 
         if inplace:
             self._ranges = repl
-        else:
-            cp = deepcopy(self)
-            cp._ranges = repl
-            return cp
+            return self
+        return namedrange.from_dict(repl, self.args)
 
 
 def rework_range_lists_into_dict(range_exprs: Dict[str, Iterable[RangeExpr]]) -> Dict[str, RangeExpr]:
