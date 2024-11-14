@@ -23,6 +23,15 @@ class namedrange_args:
     compare_start_when_sorting: bool = DEFAULT_COMPARE_START
 
 
+def rework_range_lists_into_dict(range_expr: Dict[str, Iterable[Any]]) -> Dict[str, Any]:
+    out = {}
+    for key, range_list in range_expr.items():
+        for idx, range_ in enumerate(range_list):
+            out[f"{key}-{idx}"] = range_
+
+    return out
+
+
 def calculate_complementary_ranges(input_ranges, start, end) -> List[RangeExpr]:
     complementary_ranges = []
     previous_end = start - 1
