@@ -23,15 +23,6 @@ class namedrange_args:
     compare_start_when_sorting: bool = DEFAULT_COMPARE_START
 
 
-def rework_range_lists_into_dict(range_expr: Dict[str, Iterable[Any]]) -> Dict[str, Any]:
-    out = {}
-    for key, range_list in range_expr.items():
-        for idx, range_ in enumerate(range_list):
-            out[f"{key}-{idx}"] = range_
-
-    return out
-
-
 def calculate_complementary_ranges(input_ranges, start, end) -> List[RangeExpr]:
     complementary_ranges = []
     previous_end = start - 1
@@ -263,3 +254,63 @@ def rework_range_lists_into_dict(range_exprs: Dict[str, Iterable[RangeExpr]]) ->
             out[f"{key}-{idx}"] = range_
 
     return out
+
+
+def range_expr_to_tuple(expr: RangeExpr) -> Tuple[int, int]:
+    l, r = expr.split("-")
+    return int(l), int(r)
+
+
+def tuple_to_range_expr(tuple_range: Tuple[int, int]) -> RangeExpr:
+    return f"{tuple_range[0]}-{tuple_range[1]}"
+
+
+def tuple_ranges_to_list(ranges: List[Tuple[int, int]], flatten: bool = False):
+    """Converts closed-interval ranges to a list of indices.
+    For example: [(1, 3), (5, 6)] would yield [[1, 2, 3], [5, 6]].
+    If `flatten` is set to `True`, then the list is flattened, e.g.
+    [1, 2, 3, 5, 6].
+    """
+    out = []
+    for r in ranges:
+        s, e = r
+        range_as_list = list(range(s, e + 1))
+        out.append(range_as_list)
+    if flatten:
+        return [i for r in out for i in r]
+    return out
+
+
+def ranges_to_list(ranges: List[RangeExpr], flatten: bool = False):
+    """Converts closed-interval range expressions to a list of indices.
+    For example: ["1-3", "5-6"] would yield [[1, 2, 3], [5, 6]].
+    If `flatten` is set to `True`, then the list is flattened, e.g.
+    [1, 2, 3, 5, 6].
+    """
+    tuple_ranges = [range_expr_to_tuple(r) for r in ranges]
+    return tuple_ranges_to_list(tuple_ranges, flatten)
+
+
+def list_to_ranges(l: List[int]):
+    """Converts a list of integers to string range expressions
+    such as `1-10`, `2-30`
+    """
+    residue_list = sorted(set(l))  # Ensure the list is sorted and remove duplicates
+    ranges = []
+    start = end = residue_list[0]
+
+    for i in range(1, len(residue_list)):
+        if residue_list[i] == end + 1:
+            end = residue_list[i]
+        else:
+            ranges.append((start, end))
+            start = end = residue_list[i]
+    
+    ranges.append((start, end))  # Add the last range
+
+    # Convert ranges to a more readable format
+    ranges_str = []
+    for r in ranges:
+        ranges_str.append(tuple_to_range_expr(r))
+
+    return ranges_str
