@@ -297,6 +297,10 @@ def list_to_ranges(l: List[int]):
     """
     residue_list = sorted(set(l))  # Ensure the list is sorted and remove duplicates
     ranges = []
+
+    if len(residue_list) == 0:
+        return []
+
     start = end = residue_list[0]
 
     for i in range(1, len(residue_list)):
