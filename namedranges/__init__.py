@@ -19,7 +19,7 @@ DEFAULT_COMPARE_START = True
 class namedrange_args:
     indexing: IndexingVariants = DEFAULT_INDEXING
     right_side_closed: bool = DEFAULT_RIGHT_SIDE_CLOSED
-    separator_for_str_range_expressions: bool = DEFAULT_SEPARATOR
+    separator_for_str_range_expressions: str = DEFAULT_SEPARATOR
     compare_start_when_sorting: bool = DEFAULT_COMPARE_START
 
 
@@ -168,6 +168,78 @@ class namedrange:
 
     def __repr__(self):
         return f"namedrange({self._ranges})"
+
+    def __delitem__(self, key):
+        del self._ranges[key]
+
+    def __getitem__(self, range_id: str):
+        sep = self.args.separator_for_str_range_expressions
+        split_range_id = range_id.split(sep)
+        part_name = split_range_id[0]
+        segment_name = split_range_id[1] if len(split_range_id) > 1 else None
+        
+        if segment_name is not None:
+            # Fetching explicit segment
+            return self._ranges[range_id]
+        else:
+            # Fetching all segments for this part
+            out = []
+            for k, v in self._ranges.items():
+                split_iterated_id = k.split(sep)
+                if len(split_iterated_id) > 1 and split_iterated_id[0] == part_name:
+                    out.append(v)
+            return out
+
+    def __setitem__(self, range_id: str, new_range_value: RangeExpr | List[RangeExpr]):
+        """
+        Set ranges consistently with __getitem__:
+        - If `range_id` is 'part-seg', set/replace that single segment with a single range.
+        - If `range_id` is 'part', replace all its segments with the provided list of ranges,
+          naming them 'part-0', 'part-1', ...
+        """
+        sep = self.args.separator_for_str_range_expressions
+        parts = range_id.split(sep)
+        part_name = parts[0]
+        segment_name = parts[1] if len(parts) > 1 else None
+
+        def to_tuple(expr: RangeExpr) -> Tuple[int, int]:
+            if isinstance(expr, tuple):
+                return expr
+            if isinstance(expr, str):
+                l, r = expr.split(sep)
+                return int(l), int(r)
+            raise TypeError(f"Unsupported range expression type: {type(expr)}")
+
+        if segment_name is not None:
+            # Explicit segment assignment: must be a single range
+            if isinstance(new_range_value, list):
+                if len(new_range_value) != 1:
+                    raise ValueError("Must assign exactly one range when setting an explicit segment")
+                value = to_tuple(new_range_value[0])
+            else:
+                value = to_tuple(new_range_value)
+            self._ranges[range_id] = value
+        else:
+            # Whole-part assignment: replace all segments for this part
+            # Normalize to list
+            values: List[Tuple[int, int]]
+            if isinstance(new_range_value, list):
+                values = [to_tuple(v) for v in new_range_value]
+            else:
+                values = [to_tuple(new_range_value)]
+
+            # Remove existing segments of this part
+            keys_to_delete = [k for k in list(self._ranges.keys()) if k.split(sep)[0] == part_name]
+            for k in keys_to_delete:
+                del self._ranges[k]
+
+            # Insert new segments with canonical names: part-0, part-1, ...
+            for i, v in enumerate(values):
+                key = f"{part_name}{sep}{i}"
+                self._ranges[key] = v
+
+        # Reset iterator to reflect updated ranges
+        self._iterator = iter(self._ranges.values())
 
     def add_gaps(self,
                  gap_positions: List[RangeExpr],
